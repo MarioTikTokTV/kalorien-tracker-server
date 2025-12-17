@@ -9,6 +9,14 @@ import SibApiV3Sdk from "sib-api-v3-sdk";
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
+// CORS erlauben (wichtig für dein Frontend)
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  next();
+});
+
 // Brevo API konfigurieren
 SibApiV3Sdk.ApiClient.instance.authentications["api-key"].apiKey =
   process.env.BREVO_API_KEY;
