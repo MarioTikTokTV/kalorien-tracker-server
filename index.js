@@ -1,42 +1,39 @@
-const express = require("express");
-const multer = require("multer");
-const nodemailer = require("nodemailer");
-const cors = require("cors");
+import express from "express";
+import fs from "fs";
+import path from "path";
+import multer from "multer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
 const app = express();
-app.use(cors());
+const upload = multer({ dest: "uploads/" });
 
-// Multer für Datei-Uploads
-const upload = multer({ storage: multer.memoryStorage() });
+// Brevo API konfigurieren
+SibApiV3Sdk.ApiClient.instance.authentications["api-key"].apiKey =
+  process.env.BREVO_API_KEY;
 
-// SMTP Transporter (Gmail)
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS
-  }
-});
-
-// Upload-Route
+// Datei-Upload + Mailversand
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "Keine Datei erhalten" });
-    }
+    const filePath = req.file.path;
+    const fileName = req.file.originalname;
+    const fileData = fs.readFileSync(filePath).toString("base64");
 
-    await transporter.sendMail({
-      from: `"Kalorien Tracker" <${process.env.GMAIL_USER}>`,
-      to: process.env.GMAIL_USER,
-      subject: "Anonymes Nahrungsprotokoll",
-      text: "Eine Datei wurde anonym hochgeladen.",
-      attachments: [
+    const emailApi = new SibApiV3Sdk.TransactionalEmailsApi();
+
+    await emailApi.sendTransacEmail({
+      sender: { email: process.env.BREVO_SENDER },
+      to: [{ email: process.env.BREVO_RECEIVER }],
+      subject: "Neue Datei vom Kalorien-Tracker",
+      htmlContent: "<p>Eine Datei wurde hochgeladen.</p>",
+      attachment: [
         {
-          filename: req.file.originalname,
-          content: req.file.buffer
+          name: fileName,
+          content: fileData
         }
       ]
     });
+
+    fs.unlinkSync(filePath);
 
     res.json({ success: true });
   } catch (err) {
@@ -45,4 +42,4 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server läuft auf Port 3000"));
+app.listen(3000, () => console.log("Server läuft"));
