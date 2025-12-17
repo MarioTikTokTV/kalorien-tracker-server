@@ -1,3 +1,5 @@
+console.log("BREVO_API_KEY:", process.env.BREVO_API_KEY);
+
 import express from "express";
 import fs from "fs";
 import path from "path";
